@@ -115,7 +115,7 @@ class EP_BP_API {
 									'term_id' => bp_get_the_profile_field_id(),
 									'slug' => bp_get_the_profile_field_name(),
 									'name' => bp_get_the_profile_field_value(),
-									'parent' => bp_get_the_profile_group_name(),
+									'parent' => 0, // bp_get_the_profile_group_name(),
 								];
 
 								// TODO make filterable/optional
@@ -209,7 +209,7 @@ class EP_BP_API {
 			$flatten[] = $object[1];
 		}
 
-		$path = trailingslashit( ep_get_index_name( bp_get_root_blog_id() ) ) . "{$this->type}/_bulk";
+		$path = trailingslashit( ep_get_index_name( bp_get_root_blog_id() ) ) . "post/_bulk";
 
 		// make sure to add a new line at the end or the request will fail
 		$body = rtrim( implode( "\n", $flatten ) ) . "\n";
