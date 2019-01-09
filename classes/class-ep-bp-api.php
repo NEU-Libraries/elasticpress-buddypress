@@ -152,8 +152,7 @@ class EP_BP_API {
 			'post_mime_type'    => '',
 			'permalink'         => bp_get_member_permalink(),
 			'terms'             => array_merge( $this->prepare_terms( $user ), $xprofile_terms ),
-			//'post_meta'         => $this->prepare_meta( $user ),
-			'post_meta'         => [],
+			'post_meta'         => $this->prepare_meta( $user ),
 			'date_terms'        => [],
 			'comment_count'     => 0,
 			'comment_status'    => 0,
@@ -244,7 +243,7 @@ class EP_BP_API {
 	 * @return bool success
 	 */
 	public function bulk_index_groups( $args = [] ) {
-		global $groups_template;
+		global $groups_template, $humanities_commons;
 
 		$this->type = self::GROUP_TYPE_NAME;
 
@@ -254,6 +253,10 @@ class EP_BP_API {
 			'per_page' => self::MAX_BULK_GROUPS_PER_PAGE,
 			'page' => 1,
 		], $args );
+
+		if ( $humanities_commons ) {
+			remove_filter( 'bp_before_has_groups_parse_args', array( $humanities_commons, 'hcommons_set_groups_query_args' ) );
+		}
 
 		$querystring = bp_ajax_querystring( 'groups' ) . '&' . http_build_query( $args );
 
@@ -290,7 +293,7 @@ class EP_BP_API {
 	 * @return bool success
 	 */
 	public function bulk_index_members( $args = [] ) {
-		global $members_template;
+		global $members_template, $humanities_commons;
 
 		$this->type = self::MEMBER_TYPE_NAME;
 
@@ -300,6 +303,10 @@ class EP_BP_API {
 			'per_page' => self::MAX_BULK_MEMBERS_PER_PAGE,
 			'page' => 1,
 		], $args );
+
+		if ( $humanities_commons ) {
+			remove_filter( 'bp_after_has_members_parse_args', array( $humanities_commons, 'hcommons_set_members_query' ) );
+		}
 
 		$querystring = bp_ajax_querystring( 'members' ) . '&' . http_build_query( $args );
 
@@ -335,13 +342,15 @@ class EP_BP_API {
 	 * @return array
 	 */
 	public function prepare_meta( $object ) {
-		switch ( $this->type ) {
-			case self::MEMBER_TYPE_NAME:
-				$meta = get_user_meta( $object->ID );
-				break;
-			case self::GROUP_TYPE_NAME:
-				$meta = groups_get_groupmeta( $object->id );
-				break;
+
+		if ( property_exists( $object, 'user_login' ) ) {
+			$object->post_type = self::MEMBER_TYPE_NAME;
+			$meta              = apply_filters( 'ep_bp_user_meta', get_user_meta( $object->ID ), $object );
+		} else if ( property_exists( $object, 'creator_id' ) ) {
+			$object->post_type = self::GROUP_TYPE_NAME;
+			$meta              = groups_get_groupmeta( $object->id );
+		} else {
+			return [];
 		}
 
 		$post = $object;
